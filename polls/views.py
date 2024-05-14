@@ -14,6 +14,7 @@ def ola (request):
     questions  = Question.objects.all()
     mensagem = " Você foi Logado com Sucesso!!!"
     messages.success(request,mensagem)
+    
     context={
         "all_questions": questions
     }

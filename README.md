@@ -9,7 +9,7 @@ A Biblioteca é um sistema de gerenciamento de livros que permite aos usuários 
 
 1. Clone o repositório para sua máquina local:
 ``` 
-git clone https://github.com/seu-usuario/biblioteca.git
+git clone https://github.com/DjalmaFelipe02/Library.git
 ```
 2. Navegue até o diretório do projeto:
 ``` 

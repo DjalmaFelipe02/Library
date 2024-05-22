@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+
+
+
+{% block 'title' %} Vizualizar Livro{% endblock 'title' %}
+
+
+{% block 'content' %}
+
+    <div class="container">
+        <h1>{{ livro.nome }}</h1>
+        <p><strong>Autor:</strong> {{ livro.autor }}</p>
+        <p><strong>Editora:</strong> {{ livro.editora }}</p>
+        <p><strong>Sinopse:</strong> {{ livro.sinopse }}</p>
+        
+        {% if livro.emprestado and user.is_authenticated == user %}
+        <p>Tempo Restante para Devolução: 
+            {% if tempo_restante %}
+                {{ tempo_restante.dias }}d {{ tempo_restante.horas }}h {{ tempo_restante.minutos }}m {{ tempo_restante.segundos }}s
+            {% else %}
+                Indisponível
+            {% endif %}
+        </p>
+        {% endif %}
+        
+        <a href="{% url 'home' %}" class="btn btn-primary">Voltar</a>
+    </div>
+
+{% endblock 'content' %}
+
+

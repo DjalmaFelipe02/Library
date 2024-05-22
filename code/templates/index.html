@@ -1,0 +1,158 @@
+{% extends "layout.html" %}
+
+
+{% block 'title' %}
+    Library
+{% endblock 'title' %}
+
+{% block 'content' %}
+    <h1>{{titulo}}</h1>
+            {% if request.user.is_staff %}
+                        
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalExemplo">
+                Cadastrar Livro
+            </button>
+                            
+              <!-- Modal -->
+            <div class="modal fade" id="modalExemplo" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+              <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Cadastrar Livro</h5>
+                  </div>
+                  <div class="modal-body">
+                    <form  action='{% url "cadastrar_livro" %}' method="post" enctype="multipart/form-data"> {% csrf_token %}
+                      {{form_livro.as_p}}                        
+                      <button type="submit" class="btn btn-success">Cadastrar</button>
+                    </form>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalExemplo3">
+                Cadastrar Categoria
+            </button>
+                            
+              <!-- Modal -->
+            <div class="modal fade" id="modalExemplo3" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">                
+              <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Cadastrar Categoria</h5>
+                  </div>
+                  <div class="modal-body">
+                    <form  action='{% url "cadastrar_categoria" %}' method="post"> {% csrf_token %}
+                      {{form_categoria.as_p}}
+                      <button type="submit" class="btn btn-success">Cadastrar</button>
+                    </form>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+              
+
+                        
+            {% endif %}
+                    <br><br>
+                    <form method="GET">
+                        <div class="mb-3">
+                            <label for="nome_livro" class="form-label">Nome do Livro:</label>
+                            <input type="text" name="nome_livro" id="nome_livro" class="form-control" placeholder="Digite o nome do livro">
+                        </div>
+                        <div class="mb-3">
+                            <label for="categoria" class="form-label">Categoria:</label>
+                            <select name="categoria" id="categoria" class="form-select">
+                                <option value="">Todas as categorias</option>
+                               {% for categoria in categorias %}
+                                    <option value="{{ categoria }}">{{ categoria }}</option>
+                               
+                               {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="emprestado" class="form-label">Status de Empréstimo:</label>
+                            <select name="emprestado" id="emprestado" class="form-select">
+                                <option value="">Todos</option>
+                                <option value="emprestado">Emprestados</option>
+                                <option value="disponivel">Disponíveis</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Filtrar</button>
+                    </form>
+                    <br>
+    <div class="container">
+        <div class="row"> 
+            {% for livro in livros  %}
+            <div class="col-md">
+                    <div class="card" style="width: 18rem;">
+                        
+                    <div class="card-body">
+                      {% if livro.image  %}
+                        <img width="100%" src="{{ livro.image.url}}" alt="Imagem do Livro">
+                      {% endif %}
+                        <h5 class="card-title">{{livro}}</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">{{livro.categoria}}</h6>
+                        <h7 style="display:inline"class="card-subtitle mb-2">Emprestado</h7>
+                        {% if livro.emprestado %}
+                            <svg color="green" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-square" viewBox="0 0 16 16">
+                                <path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2z"/>
+                                <path d="M10.97 4.97a.75.75 0 0 1 1.071 1.05l-3.992 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425z"/>
+                            </svg>
+                            {% if user.is_authenticated %}<p>Emprestado para: {{ livro.usuario.username }}</p>{% endif %}
+                        {% else  %}
+                            
+                            <svg color="red" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-square-fill" viewBox="0 0 16 16">
+                            <path d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zm3.354 4.646L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 1 1 .708-.708"/>
+                            </svg>
+                            <br>
+                        
+                        {% endif %}
+                        <br>
+                        {% if user.is_authenticated %}
+                            <a href="{% url "view_book" livro.id %}" class="btn btn-success">Acessar</a>{% if not livro.emprestado %}
+                            <a href="{% url 'ver_form_emprestimo' livro.id %}" class="btn btn-success">Empréstimo</a>{% endif %}  
+                              {% if request.user.is_staff %}
+                                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalExemplo2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash-fill" viewBox="0 0 16 16">
+                                        <path d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5M8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5m3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0"/>
+                                      </svg>
+                                </button>
+                                  
+                                  <!-- Modal -->
+                                <div class="modal fade" id="modalExemplo2" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                                    <div class="modal-dialog" role="document">
+                                      <div class="modal-content">
+                                        <div class="modal-header">
+                                          <h5 class="modal-title" id="exampleModalLabel">Apagar Livro</h5>
+                                        </div>
+                                        <div class="modal-body">
+                                          Tem certeza que deseja apagar esse livro ?
+                                        </div>
+                                        <div class="modal-footer">
+                                          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                                          <a href="{% url 'excluir_livro' livro.id %}" class="btn btn-danger">Apagar</a>
+                                        </div>
+                                      </div>
+                                    </div>
+                                </div>
+                              {% endif %}
+                          {% else %}
+                            <p class="card-text">Vc só poderá acessar o Livro se estiver Logado</p>
+                        {% endif %}
+                    </div>
+                  </div>
+                    {% comment %} NÃO ESQUECER DE POR A DATA DE PUBLICAÇÃO DO LIVRO {% endcomment %}
+                    {% comment %} <p>{{ question.pub_date|date:"d/m/Y" }} | {{ question.question_text }}</p> {% endcomment %}
+            </div>
+            {% endfor %} 
+        </div>
+    </div>   
+{% endblock 'content' %}
+

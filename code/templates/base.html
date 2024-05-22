@@ -1,0 +1,37 @@
+{% load static %}
+
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block 'title' %}{% endblock 'title'%}</title>
+
+    {% block 'head' %}{% endblock 'head'%}
+
+    <link rel="short cut icon" type="image/x-icon" href="{% static "img/favicon.ico" %}">
+  
+  </head>
+  <body>
+    {% block 'header' %}{% endblock 'header' %}
+
+    {% comment %} {% if user.is_authenticated %}
+			<h2>Olá, {{user.username}}, voce foi logado com sucesso.</h2>  
+		{% endif %}  {% endcomment %}
+		 
+    {% block 'main' %}
+      {% block 'content' %}
+          
+      {% endblock 'content' %}
+    {% endblock 'main' %}
+
+    {% block 'footer' %}{% endblock 'footer' %}
+
+    <script src="https://code.jquery.com/jquery-3.6.1.min.js" integrity="sha256-o88AwQnZB+VDvE9tvIXrMQaPlFFSUTR+nldQm1LuPXQ=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+
+
+    {% block 'scripts' %}{% endblock 'scripts' %}
+  </body>
+ 
+</html>

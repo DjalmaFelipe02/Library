@@ -1,0 +1,129 @@
+{% extends "layout.html" %}
+
+{% block 'title' %} Meus Livros{% endblock 'title' %}
+
+{% load filters %}
+
+{% block 'content' %}
+    <h1>Bem-vindo, {{ user.username }}!</h1>
+    <hr class="hr" />
+    <div class="container">
+      <h3>Seus Livros</h3>
+      <br>
+        <div class="row"> 
+            {% for livro in livros  %}
+            <div class="col-md">
+                    <div class="card" style="width: 18rem;">
+                    <div class="card-body">
+                      {% if livro.img %}
+                      <img width='100%' src="{{livro.img.url}}" alt="Imagem do Livro">
+                      {% endif %}
+                      <h5 class="card-title">{{livro}}</h5>
+                      <h6 class="card-subtitle mb-2 text-muted">{{livro.categoria}}</h6>
+                      <p class="card-text">{{livro.sinopse}}</p>
+                      <br>
+                      <a href="{% url "view_book" livro.id %}" class="btn btn-success">Acessar</a> |  
+                      {% if livro.usuario == user %}
+                        <a href="{% url 'devolver_livro' livro.id %}" class="btn btn-danger">Devolver</a>
+                      {% endif %}
+                    </div>
+                  </div>
+                    {% comment %} NÃO ESQUECER DE POR A DATA DE PUBLICAÇÃO DO LIVRO {% endcomment %}
+                    {% comment %} <p>{{ question.pub_date|date:"d/m/Y" }} | {{ question.question_text }}</p> {% endcomment %}
+            </div>
+            {% endfor %} 
+        </div>
+        <hr class="hr" />
+        <br>
+        <h2>Seus Livros Pegos Por Empréstimo</h2>
+        <table class="table">
+          <thead>
+              <tr>
+                <th>Livro</th>
+                <th>Data de Empréstimo</th>
+                <th>Data de Devolução</th>
+                <th>Tempo Restante</th>
+              </tr>
+          </thead>
+          <tbody>
+              {% for emprestimo in page_obj %}
+              <tr>
+                <td>{{ emprestimo.livro.nome }}</td>
+                <td>{{ emprestimo.data_emprestimo|date:"d/m/Y" }}</td>
+                <td>{{ emprestimo.data_devolucao|date:"d/m/Y" }}</td>
+                <td>
+                  {{ emprestimo.data_devolucao|mostra_duracao:emprestimo.data_emprestimo|safe }}
+                </td>
+               
+
+              </tr>
+              {% endfor %}
+          </tbody>
+      </table>
+  
+      <!-- Paginação -->
+      <nav aria-label="Page navigation">
+          <ul class="pagination">
+              {% if page_obj.has_previous %}
+              <li class="page-item">
+                  <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                      <span aria-hidden="true">&laquo;</span>
+                  </a>
+              </li>
+              {% endif %}
+              {% for num in page_obj.paginator.page_range %}
+              <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                  <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+              </li>
+              {% endfor %}
+              {% if page_obj.has_next %}
+              <li class="page-item">
+                  <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                      <span aria-hidden="true">&raquo;</span>
+                  </a>
+              </li>
+              {% endif %}
+          </ul>
+      </nav>
+    </div>   
+
+{% endblock 'content' %}
+
+{% block 'scripts' %}
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+      function updateDurations() {
+          const durationElements = document.querySelectorAll('.duracao');
+  
+          durationElements.forEach(el => {
+              const end = new Date(el.getAttribute('data-end'));
+              const start = new Date(el.getAttribute('data-start'));
+              const now = new Date();
+  
+              const diff = end - now;
+  
+              if (diff <= 0) {
+                  el.innerHTML = '<span style="color: red;">Expirado</span>';
+              } else {
+                  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  
+                  let remainingTime = "";
+                  if (days > 0) remainingTime += `${days} dias `;
+                  if (hours > 0) remainingTime += `${hours} horas `;
+                  if (minutes > 0) remainingTime += `${minutes} minutos`;
+  
+                  el.innerHTML = remainingTime;
+              }
+          });
+      }
+  
+      updateDurations();
+      setInterval(updateDurations, 60000); // Atualiza a cada minuto
+  });
+  </script>
+  
+
+{% endblock 'scripts' %}

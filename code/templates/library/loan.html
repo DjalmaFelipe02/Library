@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+
+{% block 'title' %}Empréstimo{% endblock 'title' %}
+
+
+
+{% block 'content' %}
+
+
+    <h1>Formulário de Devolução de Livro</h1>
+    <form method="post" action="{% url 'processar_emprestimo' %}">{% csrf_token %}
+        <input type="hidden" name="livro_id" value="{{ livro.id }}">
+        <label for="data_devolucao">Data de Devolução:</label>
+        <input type="date" id="data_devolucao" name="data_devolucao" required>
+        <button type="submit" class="btn btn-success">Enviar</button>
+    </form>
+
+
+{% endblock 'content' %}

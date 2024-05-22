@@ -31,6 +31,7 @@ ALLOWED_HOSTS = ['.vercel.app']
 # ALLOWED_HOSTS = []
 
 
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -143,8 +144,8 @@ MEDIA_URL = '/media/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-LOGIN_REDIRECT_URL = '/index'
-LOGOUT_REDIRECT_URL = '/index'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
 
 MESSAGES_TAGS = {     #Declaration of BootsTrap based tags
     messages.DEBUG:'secondary',

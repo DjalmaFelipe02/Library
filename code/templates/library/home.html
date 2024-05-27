@@ -15,12 +15,15 @@
             <div class="col-md">
                     <div class="card" style="width: 18rem;">
                     <div class="card-body">
-                      {% if livro.img %}
-                      <img width='100%' src="{{livro.img.url}}" alt="Imagem do Livro">
+                      {% if livro.image  %}
+                        <img width="100%" class="card-img-top" src="{{ livro.image.url}}" alt="Imagem do Livro"   width="160" height="310">
                       {% endif %}
-                      <h5 class="card-title">{{livro}}</h5>
-                      <h6 class="card-subtitle mb-2 text-muted">{{livro.categoria}}</h6>
-                      <p class="card-text">{{livro.sinopse}}</p>
+                      <h4 class="card-title">{{livro}}</h4>
+                      {% for item in livros_com_avaliacoes %}
+                        <h6 class="card-subtitle mb-2 text-muted">{{livro.categoria}} | {{ item.media_avaliacoes|default:"Sem avaliações" }} <svg color="yellow" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-star-fill" viewBox="0 0 16 16">
+                          <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/>
+                        </svg></h6>
+                      {% endfor %}
                       <br>
                       <a href="{% url "view_book" livro.id %}" class="btn btn-success">Acessar</a> |  
                       {% if livro.usuario == user %}
@@ -43,6 +46,7 @@
                 <th>Data de Empréstimo</th>
                 <th>Data de Devolução</th>
                 <th>Tempo Restante</th>
+                <th>Opção</th>
               </tr>
           </thead>
           <tbody>
@@ -52,9 +56,12 @@
                 <td>{{ emprestimo.data_emprestimo|date:"d/m/Y" }}</td>
                 <td>{{ emprestimo.data_devolucao|date:"d/m/Y" }}</td>
                 <td>
-                  {{ emprestimo.data_devolucao|mostra_duracao:emprestimo.data_emprestimo|safe }}
-                </td>
-               
+                {% if emprestimo.expirado %}
+                      <span class="expirado">Expirado</span>
+                      {% else %}
+                          {{ tempo_restante.dias }}d {{ emprestimo.tempo_restante.horas }}h {{ emprestimo.tempo_restante.minutos }}m
+                      {% endif %}
+              </td>
 
               </tr>
               {% endfor %}
@@ -88,42 +95,3 @@
     </div>   
 
 {% endblock 'content' %}
-
-{% block 'scripts' %}
-
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-      function updateDurations() {
-          const durationElements = document.querySelectorAll('.duracao');
-  
-          durationElements.forEach(el => {
-              const end = new Date(el.getAttribute('data-end'));
-              const start = new Date(el.getAttribute('data-start'));
-              const now = new Date();
-  
-              const diff = end - now;
-  
-              if (diff <= 0) {
-                  el.innerHTML = '<span style="color: red;">Expirado</span>';
-              } else {
-                  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  
-                  let remainingTime = "";
-                  if (days > 0) remainingTime += `${days} dias `;
-                  if (hours > 0) remainingTime += `${hours} horas `;
-                  if (minutes > 0) remainingTime += `${minutes} minutos`;
-  
-                  el.innerHTML = remainingTime;
-              }
-          });
-      }
-  
-      updateDurations();
-      setInterval(updateDurations, 60000); // Atualiza a cada minuto
-  });
-  </script>
-  
-
-{% endblock 'scripts' %}

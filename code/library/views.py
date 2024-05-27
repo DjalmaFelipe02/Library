@@ -1,15 +1,14 @@
 from .models import *
-from datetime import date
+from datetime import date, timedelta
 from django.utils import timezone
+from django.db.models import Avg
 from django.contrib import messages
 from django.http import HttpResponse
-from pytz import timezone as pytz_timezone 
-from book.models import Livro , Emprestimo
-from django.db import IntegrityError, transaction
 from django.core.paginator import Paginator
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
-from book.forms import BookRegister ,FiltroLivroForm, CategoryRegister
+from book.models import Livro,Emprestimo,Categoria, Avaliacao
+from book.forms import BookRegister ,FiltroLivroForm, CategoryRegister, AvaliacaoForm
 
 
 def index(request):
@@ -18,15 +17,20 @@ def index(request):
         forms_categoria = CategoryRegister()
         form_filtro = FiltroLivroForm(request.GET)
         livros = Livro.objects.all()
-        categorias = Livro.objects.values_list('categoria', flat=True).distinct()
+        categorias = Categoria.objects.all()
+
+        # Inicialize as variáveis de filtragem
+        categoria_id = None
+        emprestado = None
+        nome_livro = None
 
         if form_filtro.is_valid():
-            categoria = form_filtro.cleaned_data.get('categoria')
+            categoria_id = form_filtro.cleaned_data.get('categoria')
             emprestado = form_filtro.cleaned_data.get('emprestado')
             nome_livro = form_filtro.cleaned_data.get('nome_livro')
 
-            if categoria:
-                livros = livros.filter(categoria=categoria)
+            if categoria_id:
+                livros = livros.filter(categoria_id=categoria_id)
             
             if emprestado:
                 if emprestado == 'emprestado':
@@ -36,67 +40,105 @@ def index(request):
         if nome_livro:  # Novo bloco para filtrar por nome do livro
             livros = livros.filter(nome__icontains=nome_livro)
 
+        for livro in livros:
+            media_avaliacoes = Avaliacao.objects.filter(livro=livro).aggregate(media=Avg('nota'))['media']
+            livro.media_avaliacoes = media_avaliacoes
+
+        paginator = Paginator(livros, 12)  # 10 livros por página
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+
         if request.user.is_authenticated:
             messages.success(request, "Você foi logado com sucesso!")
         else:
             aviso = "Aviso importante: Esta página não exige Login"
             messages.warning(request, aviso)
-        return render(request, "index.html", {'titulo': 'Ultimos Livros','livros':livros,'form_livro': forms_livro,'form_categoria': forms_categoria,"form_filtro":form_filtro,'categorias': categorias}) #'livros_sem_usuario': livros_sem_usuario
-
+        return render(request, "index.html", {'titulo': 'Ultimos Livros','livros':livros,'form_livro': forms_livro,'form_categoria': forms_categoria,
+                                              "form_filtro":form_filtro,'categorias': categorias,'page_obj': page_obj,})
 
 @login_required
-def home (request):
-    mensagem = " Você foi Logado com Sucesso!!!"
-    messages.success(request,mensagem)
+def home(request):
+    mensagem = "Você foi logado com sucesso!"
+    messages.success(request, mensagem)
 
-    livros = Livro.objects.filter(usuario= request.user)
-    emprestimos = Emprestimo.objects.filter(nome_emprestimo = request.user)
+    # Obter os livros do usuário
+    livros = Livro.objects.filter(usuario=request.user)
     form = BookRegister()
-    
-    paginator = Paginator(emprestimos, 8)  # 8 empréstimos por página
+
+    # Obter os empréstimos do usuário
+    emprestimos = Emprestimo.objects.filter(nome_emprestimo=request.user)
+
+    # Paginação dos empréstimos
+    paginator = Paginator(emprestimos, 8)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    
-    context={
+
+    for emprestimo in emprestimos:
+        if emprestimo.data_devolucao > timezone.now():
+            tempo_restante = emprestimo.data_devolucao - timezone.now()
+            dias = tempo_restante.days
+            horas, minutos = divmod(tempo_restante.seconds, 3600)
+            minutos, segundos = divmod(minutos, 60)
+            emprestimo.tempo_restante = {
+                "dias": dias,
+                "horas": horas,
+                "minutos": minutos,
+                "segundos": segundos
+            }
+        else:
+            emprestimo.expirado = True
+
+    # Calcular a média de avaliações para cada livro do usuário
+    livros_com_avaliacoes = []
+    for livro in livros:
+        media_avaliacoes = Avaliacao.objects.filter(livro=livro).aggregate(media=Avg('nota'))['media']
+        livros_com_avaliacoes.append({
+            'livro': livro,
+            'media_avaliacoes': media_avaliacoes,
+        })
+
+    context = {
+        "livros_com_avaliacoes": livros_com_avaliacoes,
         "livros": livros,
         "emprestimos": emprestimos,
+        "tempo_restante": tempo_restante,
         "page_obj": page_obj,
         'form': form,
-        'today': date.today()
+        'today': timezone.now(),
     }
 
     return render(request, "library/home.html", context)
 
-def view_book(request,id):
-        if request.user.is_authenticated:
-            livros = get_object_or_404(Livro,id=id)
-            if request.user == livros.usuario or not livros.emprestado:
-                # Calcula o tempo restante para devolução do livro se estiver emprestado
-                tempo_restante = None
-                if livros.emprestado:
-                    emprestimo = Emprestimo.objects.filter(livro=livros, nome_emprestimo=request.user, data_devolucao__isnull=True).first()
-                    if emprestimo:
-                        tempo_restante = emprestimo.data_devolucao - timezone.now()
-                        horas = tempo_restante.seconds // 3600
-                        minutos = (tempo_restante.seconds // 60) % 60
-                        segundos = tempo_restante.seconds % 60
-                        tempo_restante = {
-                        "dias": tempo_restante.days,
-                        "horas": horas,
-                        "minutos": minutos,
-                        "segundos": segundos
-                        }
+def view_book(request, id):
+    livro = get_object_or_404(Livro, id=id)
+    tempo_restante = None
+    pode_avaliar = False
 
-                context = {
-                    "livro": livros,
-                    "tempo_restante": tempo_restante
-                }
-                return render(request, "library/view_book.html", context)
-            # if not livros.emprestado:
-            #     return render(request, "library/view_book.html", context)
-            else:
-                return HttpResponse("Esse livro não existe ou não é seu.")
-        return redirect('index')
+    if request.user.is_authenticated:
+        emprestimo = Emprestimo.objects.filter(livro=livro, nome_emprestimo=request.user, data_devolucao__gt=timezone.now()).first()
+        if emprestimo:
+            tempo_restante = emprestimo.data_devolucao - timezone.now()
+            horas = tempo_restante.seconds // 3600
+            minutos = (tempo_restante.seconds // 60) % 60
+            segundos = tempo_restante.seconds % 60
+            tempo_restante = {
+                "dias": tempo_restante.days,
+                "horas": horas,
+                "minutos": minutos,
+                "segundos": segundos
+            }
+            pode_avaliar = True
+
+    avaliacoes = Avaliacao.objects.filter(livro=livro)
+    media_avaliacoes = avaliacoes.aggregate(media=Avg('nota'))['media']
+
+    context = {
+        "livro": livro,
+        "tempo_restante": tempo_restante,
+        "pode_avaliar": pode_avaliar,
+        "media_avaliacoes": media_avaliacoes
+    }
+    return render(request, "library/view_book.html", context)
 
 
 
@@ -105,15 +147,22 @@ def ver_form_emprestimo(request,id):
     livro = get_object_or_404(Livro, id=id)
     return render(request, 'library/loan.html', {'livro': livro})
 
-
+########EMPRÉSTIMOS#################EMPRÉSTIMOS########################EMPRÉSTIMOS################################################################################################################################
 @login_required
 def processar_emprestimo(request):
     if request.method == 'POST':
         livro_id = request.POST.get('livro_id')
-        data_devolucao = request.POST.get('data_devolucao')
+        quantidade_dias = request.POST.get('quantidade_dias')
 
-        # Convertendo a data de devolução para um objeto datetime
-        data_devolucao = timezone.datetime.strptime(data_devolucao, '%Y-%m-%d')
+        try:
+            quantidade_dias = int(quantidade_dias)
+        except ValueError:
+            messages.error(request, 'A quantidade de dias informada não é válida.')
+            return redirect('index')
+
+        if quantidade_dias < 1 or quantidade_dias > 14:
+            messages.error(request, 'A quantidade de dias deve estar entre 1 e 14.')
+            return redirect('index')
 
         livro = get_object_or_404(Livro, id=livro_id)
 
@@ -122,23 +171,29 @@ def processar_emprestimo(request):
             livro.emprestado = True
             livro.save()
 
-            # Obtém o fuso horário de São Paulo, Brasil
-            sao_paulo_tz = pytz_timezone('America/Sao_Paulo')
-            # Converte a data de devolução para o fuso horário de São Paulo
-            data_devolucao = sao_paulo_tz.localize(data_devolucao)
-            
+            # Calcula a data de devolução baseada na quantidade de dias
+            data_devolucao = timezone.now() + timedelta(days=quantidade_dias)
+
+            # Verifica se o livro já foi emprestado antes
+            emprestimo_anterior = Emprestimo.objects.filter(livro=livro, data_devolucao__isnull=True).first()
+
+            if emprestimo_anterior:
+                # Se o livro já foi emprestado antes, atualize o período de empréstimo
+                emprestimo_anterior.data_devolucao = data_devolucao
+                emprestimo_anterior.save()
+
             Emprestimo.objects.create(
                 nome_emprestimo=request.user,
                 data_emprestimo=timezone.now(),
                 data_devolucao=data_devolucao,
                 livro=livro
             )
-            
-            messages.success(request, f'O livro "{livro.nome}" foi pego por emprestimo até {data_devolucao.strftime("%d/%m/%Y")}.')
+
+            messages.success(request, f'O livro "{livro.nome}" foi pego emprestado por {quantidade_dias} dias.')
         else:
             messages.error(request, f'O livro "{livro.nome}" já está emprestado.')
     else:
-        messages.error(request, 'Ocorreu um erro ao processar o formulário de empréstimo.')
+        messages.error(request, 'Método inválido para processar o formulário de empréstimo.')
 
     return redirect('index')
 
@@ -171,6 +226,9 @@ def excluir_emprestimo(request, id):
     messages.success(request, 'Empréstimo excluído com sucesso.')
     return redirect('home')
 
+
+##############CADASTRO E EXCLUSÃO DE LIVROS###################################################################################################################################################################
+
 @login_required
 def cadastrar_livro(request):
     if request.method == 'POST':
@@ -186,21 +244,10 @@ def cadastrar_livro(request):
 
 @login_required
 def excluir_livro(request, id):
-    livro = get_object_or_404(Livro, id=id)
-    
-    # Verificar se há algum empréstimo associado a este livro
-    emprestimos_associados = Emprestimo.objects.filter(livro=livro)
-    if emprestimos_associados.exists():
-        messages.error(request, 'Este livro não pode ser excluído porque ainda está emprestado.')
-        return redirect('index')
+    livro = Livro.objects.get(id=id)
+    livro.delete()
+    messages.success(request, 'Livro excluído com sucesso.')
 
-    try:
-        with transaction.atomic():
-            livro.delete()
-        messages.success(request, 'Livro excluído com sucesso.')
-    except IntegrityError:
-        messages.error(request, 'Erro ao excluir o livro devido a uma falha de integridade de chave estrangeira.')
-    
     return redirect('index')
 
 @login_required
@@ -215,3 +262,55 @@ def cadastrar_categoria(request):
             messages.warning(request, 'Cadastro da Categoria falhou')
             return redirect('index')
     return redirect('index')
+
+############### AVALIAÇÃO  ####################################################################################################################################################################
+
+@login_required
+def avaliar_livro(request, id):
+    livro = get_object_or_404(Livro, id=id)
+
+    # Verificar se o usuário está com o livro emprestado
+    emprestimo = Emprestimo.objects.filter(livro=livro, nome_emprestimo=request.user, data_devolucao__gt=timezone.now()).first()
+
+    if emprestimo:
+        if request.method == 'POST':
+            form = AvaliacaoForm(request.POST)
+            if form.is_valid():
+                avaliacao = form.save(commit=False)
+                avaliacao.livro = livro
+                avaliacao.usuario = request.user
+                avaliacao.save()
+                messages.success(request, 'Avaliação salva com sucesso.')
+                return redirect('view_book', id=livro.id)
+        else:
+            form = AvaliacaoForm()
+        return render(request, 'library/avaliation/rate.html', {'form': form, 'livro': livro})
+    else:
+        messages.error(request, 'Você não pode avaliar este livro porque não está com ele emprestado.')
+        return redirect('detalhe_livro', id=livro.id)
+
+@login_required
+def ver_avaliacoes(request, id):
+    livro = get_object_or_404(Livro, id=id)
+    avaliacoes = Avaliacao.objects.filter(livro=livro)
+    total_avaliacoes = avaliacoes.count()
+
+    total_avaliacoes = avaliacoes.count()
+    distribuicao_notas = {
+        1: avaliacoes.filter(nota=1).count(),
+        2: avaliacoes.filter(nota=2).count(),
+        3: avaliacoes.filter(nota=3).count(),
+        4: avaliacoes.filter(nota=4).count(),
+        5: avaliacoes.filter(nota=5).count(),
+    }
+
+    percentuais = {nota: (contagem / total_avaliacoes) * 100 if total_avaliacoes > 0 else 0 for nota, contagem in distribuicao_notas.items()}
+
+    context = {
+        "livro": livro,
+        "avaliacoes": avaliacoes,
+        "percentuais": percentuais,
+        'total_avaliacoes': total_avaliacoes,
+    }
+
+    return render(request, 'library/avaliation/view_avaliation.html', context)

@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+{% block 'title' %} Avalie Livro {% endblock 'title' %}
+
+{% block 'content' %}
+  <h1>Avaliar {{ livro.nome }}</h1>
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-success">Enviar Avaliação</button>
+  </form>
+  <br>
+
+  <a href="{% url 'view_book' livro.id %}" class="btn btn-primary">Voltar</a>
+
+  <br>  <br>  <br>  <br>  <br>  <br>  <br>  <br>  <br>  <br>  <br>  <br>
+
+{% endblock 'content' %}

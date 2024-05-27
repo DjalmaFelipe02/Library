@@ -7,13 +7,47 @@
 {% block 'content' %}
 
 
-    <h1>Formulário de Devolução de Livro</h1>
+    {% comment %} <h1>Formulário de Devolução de Livro</h1>
+    <p>Escolha o dia em que devolverá o livro.</p>
     <form method="post" action="{% url 'processar_emprestimo' %}">{% csrf_token %}
         <input type="hidden" name="livro_id" value="{{ livro.id }}">
         <label for="data_devolucao">Data de Devolução:</label>
         <input type="date" id="data_devolucao" name="data_devolucao" required>
         <button type="submit" class="btn btn-success">Enviar</button>
     </form>
+    <div></div> {% endcomment %}
+    <h1>Formulário de Devolução de Livro</h1>
+    <p>Informe por quantos dias você deseja ficar com o livro (máximo de 14 dias).</p>
+    <form method="post" action="{% url 'processar_emprestimo' %}" onsubmit="return validarQuantidadeDias()">{% csrf_token %}
+    <input type="hidden" name="livro_id" value="{{ livro.id }}">
+    <label for="quantidade_dias">Quantidade de Dias:</label>
+    <input type="number" id="quantidade_dias" name="quantidade_dias" min="1" max="14" required>
+    <button type="submit" class="btn btn-success">Enviar</button>
+    </form>
+    <br>
+    <a href="{% url 'index' %}" class="btn btn-primary">Voltar</a>
+    <div></div>
+    <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> 
 
 
 {% endblock 'content' %}
+
+{% block 'scripts' %}
+
+<script>
+    function validarQuantidadeDias() {
+        var quantidadeDiasInput = document.getElementById('quantidade_dias');
+        
+        if (quantidadeDiasInput.value < 1 || quantidadeDiasInput.value > 14) {
+            alert('Por favor, informe uma quantidade válida de dias (entre 1 e 14).');
+            return false; // Impede o envio do formulário se a quantidade de dias não estiver no intervalo permitido
+        }
+        
+        return true; // Permite o envio do formulário se a quantidade de dias for válida
+    }
+</script>
+
+{% endblock 'scripts' %}
+
+
+

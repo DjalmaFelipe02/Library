@@ -1,5 +1,5 @@
 from django import forms 
-from .models import Livro, Categoria
+from .models import Livro, Categoria, Avaliacao
 
 
 class BookRegister(forms.ModelForm):
@@ -15,17 +15,15 @@ class CategoryRegister(forms.ModelForm):
         fields = ('nome',)
 
 class FiltroLivroForm(forms.Form):
-    CATEGORIAS_CHOICES = (
-        ('', 'Todas as categorias'),  # Opção vazia para selecionar todas as categorias
-        # Adicione suas opções de categoria aqui, se necessário
-    )
+    nome_livro = forms.CharField(required=False)
+    categoria = forms.ModelChoiceField(queryset=Categoria.objects.all(), required=False)  # Certifique-se de que o campo é do tipo ModelChoiceField
+    emprestado = forms.ChoiceField(choices=(('', 'Todos'),('emprestado', 'Emprestados'), ('disponivel', 'Disponíveis')), required=False)
 
-    EMPRESTADO_CHOICES = (
-        ('', 'Todos'),  # Opção vazia para mostrar todos os livros, independentemente do status de empréstimo
-        ('emprestado', 'Emprestados'),
-        ('disponivel', 'Disponíveis'),
-    )
-
-    categoria = forms.ChoiceField(choices=CATEGORIAS_CHOICES, required=False)
-    emprestado = forms.ChoiceField(choices=EMPRESTADO_CHOICES, required=False)
-    nome_livro = forms.CharField(label='Nome do Livro', required=False)
+class AvaliacaoForm(forms.ModelForm):
+    class Meta:
+        model = Avaliacao
+        fields = ['nota', 'comentario']
+        widgets = {
+            'nota': forms.NumberInput(attrs={'min': 1, 'max': 5}),
+            'comentario': forms.Textarea(attrs={'rows': 4}),
+        }

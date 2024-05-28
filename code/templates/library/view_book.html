@@ -20,16 +20,18 @@
         <p><strong>Autor:</strong> {{ livro.autor }}</p>
         <p><strong>Editora:</strong> {{ livro.editora }}</p>
         <p><strong>Cadastrado:</strong> {{livro.data_cadastro}}</p>
-        <p style="word-wrap: break-word;" ><strong>Sinopse:</strong> {{ livro.sinopse }}</p>    
-        {% if tempo_restante %}
-            <p><strong>Tempo Restante para Devolução:</strong> {{ tempo_restante.dias }}d {{ tempo_restante.horas }}h {{ tempo_restante.minutos }}m</p>
+        <p style="word-wrap: break-word;" ><strong>Sinopse:</strong> {{ livro.sinopse }}</p> 
+        {% if livro.emprestado %}   
+            {% if tempo_restante %}
+                <p><strong>Tempo Restante para Devolução:</strong> {{ tempo_restante.dias }}d {{ tempo_restante.horas }}h {{ tempo_restante.minutos }}m</p>
+            {% endif %}
         {% endif %}
         </p>
-        <a href="{% url 'home' %}" class="btn btn-primary">Voltar</a> |
+        <a href="{% url 'home' %}" class="btn btn-primary">Voltar</a>
         {% if pode_avaliar %}
             <a href="{% url 'avaliar_livro' livro.id %}" class="btn btn-warning">Avaliar</a>
         {% endif %}
-
+        <br><br>
         <h2>Avaliações</h2>
             <a href="{% url 'ver_avaliacoes' livro.id %}" class="btn btn-primary">Ver todas as avaliações</a>
 

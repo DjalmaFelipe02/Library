@@ -66,7 +66,8 @@ def home(request):
     form = BookRegister()
 
     # Obter os empréstimos do usuário
-    emprestimos = Emprestimo.objects.filter(nome_emprestimo=request.user)
+    emprestimos = Emprestimo.objects.filter(nome_emprestimo=request.user).order_by('-data_emprestimo')
+
 
     # Paginação dos empréstimos
     paginator = Paginator(emprestimos, 8)

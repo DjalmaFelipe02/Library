@@ -121,7 +121,10 @@
                         {% endif %}
                         {% if user.is_authenticated %}
                             <a href="{% url "view_book" livro.id %}" class="btn btn-success">Acessar</a>{% if not livro.emprestado %}
-                            <a href="{% url 'ver_form_emprestimo' livro.id %}" class="btn btn-success">Empréstimo</a>{% endif %}  
+                            {% if count < 3 %}
+                              <a href="{% url 'ver_form_emprestimo' livro.id %}" class="btn btn-success">Empréstimo</a>
+                            {% endif %}
+                            {% endif %}  
                               {% if request.user.is_staff %}
                                 <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalExemplo2">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash-fill" viewBox="0 0 16 16">

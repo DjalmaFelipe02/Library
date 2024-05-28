@@ -6,6 +6,7 @@ User = get_user_model()
 class AccountSignUpForm(forms.ModelForm):
     password = forms.CharField(
         label= "Senha",
+        min_length= 6,
         max_length= 50,
         widget= forms.PasswordInput()
     )    

@@ -50,11 +50,15 @@ def index(request):
 
         if request.user.is_authenticated:
             messages.success(request, "Você foi logado com sucesso!")
+            count = Livro.objects.filter(usuario=request.user).count()
         else:
             aviso = "Aviso importante: Esta página não exige Login"
+            count = 0
             messages.warning(request, aviso)
+        if count >=3:
+            messages.warning(request, "Você só pode solicitar empréstimo de no máximo 3 livros")
         return render(request, "index.html", {'titulo': 'Ultimos Livros','livros':livros,'form_livro': forms_livro,'form_categoria': forms_categoria,
-                                              "form_filtro":form_filtro,'categorias': categorias,'page_obj': page_obj,})
+                                              "form_filtro":form_filtro,'categorias': categorias,'page_obj': page_obj,'count': count})
 
 @login_required
 def home(request):
@@ -69,10 +73,6 @@ def home(request):
     emprestimos = Emprestimo.objects.filter(nome_emprestimo=request.user).order_by('-data_emprestimo')
 
 
-    # Paginação dos empréstimos
-    paginator = Paginator(emprestimos, 8)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
 
     for emprestimo in emprestimos:
         if emprestimo.data_devolucao > timezone.now():
@@ -89,20 +89,19 @@ def home(request):
         else:
             emprestimo.expirado = True
 
+    # Paginação dos empréstimos
+    paginator = Paginator(emprestimos, 8)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
     # Calcular a média de avaliações para cada livro do usuário
-    livros_com_avaliacoes = []
     for livro in livros:
-        media_avaliacoes = Avaliacao.objects.filter(livro=livro).aggregate(media=Avg('nota'))['media']
-        livros_com_avaliacoes.append({
-            'livro': livro,
-            'media_avaliacoes': media_avaliacoes,
-        })
+            media_avaliacoes = Avaliacao.objects.filter(livro=livro).aggregate(media=Avg('nota'))['media']
+            livro.media_avaliacoes = media_avaliacoes
+
 
     context = {
-        "livros_com_avaliacoes": livros_com_avaliacoes,
         "livros": livros,
         "emprestimos": emprestimos,
-        "tempo_restante": tempo_restante,
         "page_obj": page_obj,
         'form': form,
         'today': timezone.now(),
@@ -131,13 +130,12 @@ def view_book(request, id):
             pode_avaliar = True
 
     avaliacoes = Avaliacao.objects.filter(livro=livro)
-    media_avaliacoes = avaliacoes.aggregate(media=Avg('nota'))['media']
+    livro.media_avaliacoes = avaliacoes.aggregate(media=Avg('nota'))['media']
 
     context = {
         "livro": livro,
         "tempo_restante": tempo_restante,
-        "pode_avaliar": pode_avaliar,
-        "media_avaliacoes": media_avaliacoes
+        "pode_avaliar": pode_avaliar
     }
     return render(request, "library/view_book.html", context)
 

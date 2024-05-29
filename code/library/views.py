@@ -272,6 +272,15 @@ def avaliar_livro(request, id):
     emprestimo = Emprestimo.objects.filter(livro=livro, nome_emprestimo=request.user, data_devolucao__gt=timezone.now()).first()
 
     if emprestimo:
+
+         # Verifica se o usuário já avaliou este livro
+        avaliacao_existente = Avaliacao.objects.filter(livro=livro, usuario=request.user).exists()
+
+        if avaliacao_existente:
+            messages.warning(request, 'Você já avaliou este livro.')
+            return redirect('view_book', id=livro.id)
+
+
         if request.method == 'POST':
             form = AvaliacaoForm(request.POST)
             if form.is_valid():
